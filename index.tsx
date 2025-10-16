@@ -97,7 +97,6 @@ const formatSize = (bytes: number, si: boolean = true, dp: number = 2): string =
     return bytes.toFixed(dp) + ' ' + units[u];
 };
 
-// Extend WASocket interface dengan method custom
 interface ExtendedWASocket extends ReturnType<typeof makeWASocket> {
     public?: boolean;
     decodeJid?: (jid: string) => string;
