@@ -5,7 +5,6 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Type definitions
 export interface StickerPackKey {
     fromMe: boolean;
     participant: string;
