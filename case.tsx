@@ -46,15 +46,15 @@ async function getCachedImageUrl(url) {
     if (imageCache.has(url)) {
         const cached = imageCache.get(url);
         if (now - cached.timestamp < CACHE_DURATION) {
-            console.log(chalk.green(`[CACHE HIT] Menggunakan gambar dari cache: ${url}`));
+            console.log(chalk.green(`[Hitngs Cache] Aplyy Image For Url: ${url}`));
             return url; 
         } else {
             imageCache.delete(url);
-            console.log(chalk.yellow(`[CACHE EXPIRED] Cache dihapus: ${url}`));
+            console.log(chalk.yellow(`[Kadaluarsa Chace] Cache Delete: ${url}`));
         }
     }
     try {
-        console.log(chalk.blue(`[CACHE MISS] Testing gambar: ${url}`));
+        console.log(chalk.blue(`[Chace] Testing Image: ${url}`));
         const response = await fetch(url, { method: 'HEAD' });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         imageCache.set(url, {
@@ -67,13 +67,13 @@ async function getCachedImageUrl(url) {
                 current[1].timestamp < oldest[1].timestamp ? current : oldest
             );
             imageCache.delete(oldestEntry[0]);
-            console.log(chalk.yellow(`[CACHE CLEANUP] Menghapus cache terlama: ${oldestEntry[0]}`));
+            console.log(chalk.yellow(`[CACHE CLEANUP] Menghapus cache Yg lma: ${oldestEntry[0]}`));
         }
-        
-        console.log(chalk.green(`[CACHE STORED] URL disimpan ke cache: ${url}`));
+       
+        console.log(chalk.green(`[Chce Storage] URL di save: ${url}`));
         return url;
     } catch (error) {
-        console.error(chalk.red('[CACHE ERROR] Error testing image:'), error);
+        console.error(chalk.red('[CACHE ERROR] Error test image:'), error);
         return url;
     }
 }
@@ -88,7 +88,7 @@ async function prepareCachedMedia(mediaUrl, options = {}) {
             }
         );
     } catch (error) {
-        console.error(chalk.red('[MEDIA ERROR] Error preparing media:'), error);i
+        console.error(chalk.red('[MEDIA ERROR] Error preprng Media:'), error);i
         return await prepareWAMessageMedia(
             { url: mediaUrl }, 
             { 
@@ -288,30 +288,19 @@ const vynnoxbeyours = async (
       ucapanWaktu = 'Enjoy the night! Enjoy the quiet of the night';
     }
     
-    if (isBot) {
-      console.log('\x1b[30m--------------------\x1b[0m');
-      console.log(chalk.bgHex("#4a69bd").bold(`▢ 新しいメッセージ`));
-      console.log(
-        chalk.bgHex("#ffffff").black(
-          `   ⚘ Tanggal: ${new Date().toLocaleString()} \n` +
-          `   ⚘ Pesan: ${m.body || m.mtype} \n` +
-          `   ⚘ Sender: ${pushname} \n` +
-          `   ⚘ JID: ${senderNumber} \n` +
-          `   ⚘ LID: ${senderLid || '-'}`
-        )
-      );
-      console.log();
-    }
-
-    if (isGroup) {
-      console.log(
-        chalk.bgHex("#ffffff").black(
-          `   ⌕ Group: ${groupName} \n` +
-          `   ⌕ GroupJid: ${m.chat}`
-        )
-      );
-      console.log();
-    }
+    if (isCmd) {
+  let isGroup = m.key.remoteJid.endsWith('@g.us')
+  let groupName = isGroup ? (await fantzy.groupMetadata(m.chat)).subject : "Private Chat"
+  
+  console.log(chalk.bgHex("#4a69bd").bold(`<!> 新しいメッセージ <!>`))
+  console.log(
+    chalk.blue.bold(` 𖤐 Time: ${tanggal}, ${jam} WIB\n`),
+    chalk.blue.bold(`𖤐 Number: ${m.sender.split("@")[0]}\n`),
+    chalk.blue.bold(`𖤐 Name: ${m.pushName}\n`),
+    chalk.blue.bold(`𖤐 From: ${groupName}\n`),
+    chalk.blue.bold(`𖤐 Command: ${prefix + command}`)
+  )
+}
 
     async function nevreply(text: string): Promise<void> {
       await vynnoxbeyours.sendMessage(m.chat, {
