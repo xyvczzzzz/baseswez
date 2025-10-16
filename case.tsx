@@ -38,8 +38,8 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const imageCache = new Map();
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 jam
-const MAX_CACHE_SIZE = 50; // Maksimal 50 gambar di cache
+const CACHE_DURATION = 24 * 60 * 60 * 1000; 
+const MAX_CACHE_SIZE = 50;
 
 async function getCachedImageUrl(url) {
     const now = Date.now();
@@ -294,7 +294,7 @@ const vynnoxbeyours = async (
   
   console.log(chalk.bgHex("#4a69bd").bold(`<!> 新しいメッセージ <!>`))
   console.log(
-    chalk.blue.bold(` 𖤐 Time: ${tanggal}, ${jam} WIB\n`),
+    chalk.blue.bold(` 𖤐 Time: ${penghitung}, ${jam} WIB\n`),
     chalk.blue.bold(`𖤐 Number: ${m.sender.split("@")[0]}\n`),
     chalk.blue.bold(`𖤐 Name: ${m.pushName}\n`),
     chalk.blue.bold(`𖤐 From: ${groupName}\n`),
