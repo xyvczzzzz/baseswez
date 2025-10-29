@@ -35,8 +35,6 @@ const {
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
-// Import fungsi yang benar
 import {
   smsg,
   fetchJson,
