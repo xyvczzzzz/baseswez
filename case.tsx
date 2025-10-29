@@ -18,8 +18,10 @@ import path from 'path';
 import os from 'os';
 import speed from 'performance-now';
 import { spawn, exec, execSync } from 'child_process';
-import fquoted  from './fquoted.js';
-import {
+import fquoted from './fquoted.js';
+import baileys from '@vynnox/lyvineemine';
+
+const {
   proto,
   getContentType,
   jidNormalizedUser,
@@ -29,14 +31,28 @@ import {
   prepareWAMessageMedia,
   WASocket,
   WAMessage
-} from '@vynnox/lyvineemine';
+} = baileys;
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+// Import fungsi yang benar
+import {
+  smsg,
+  fetchJson,
+  sleep,
+  formatSize,
+  runtime,
+  getBuffer,
+  toIDR,
+  capital,
+  formatp
+} from './l lízanámi/myfunction.js';
+
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
 const imageCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; 
 const MAX_CACHE_SIZE = 50;
@@ -77,6 +93,7 @@ async function getCachedImageUrl(url) {
         return url;
     }
 }
+
 async function prepareCachedMedia(mediaUrl, options = {}) {
     try {
         const cachedUrl = await getCachedImageUrl(mediaUrl);
@@ -88,7 +105,7 @@ async function prepareCachedMedia(mediaUrl, options = {}) {
             }
         );
     } catch (error) {
-        console.error(chalk.red('[MEDIA ERROR] Error preprng Media:'), error);i
+        console.error(chalk.red('[MEDIA ERROR] Error preprng Media:'), error);
         return await prepareWAMessageMedia(
             { url: mediaUrl }, 
             { 
@@ -117,104 +134,127 @@ function getCacheInfo() {
     };
 }
 
-interface MessageUpdate {
-  messages: any[];
-  type: string;
-}
+// Hapus interface TypeScript karena ini file JavaScript
+// Tetap gunakan JSDoc comments untuk dokumentasi
 
-interface Store {
-  [key: string]: any;
-}
+/**
+ * @typedef {Object} MessageUpdate
+ * @property {any[]} messages
+ * @property {string} type
+ */
 
-interface Participant {
-  id?: string;
-  jid?: string;
-  lid?: string;
-  admin?: string | null;
-  full?: any;
-}
+/**
+ * @typedef {Object} Store
+ * @property {any} [key]
+ */
 
-interface GroupMetadata {
-  subject?: string;
-  participants?: Participant[];
-}
+/**
+ * @typedef {Object} Participant
+ * @property {string} [id]
+ * @property {string} [jid]
+ * @property {string} [lid]
+ * @property {string|null} [admin]
+ * @property {any} [full]
+ */
 
-interface Plugin {
-  command?: string[];
-  owner?: boolean;
-  group?: boolean;
-  private?: boolean;
-  admin?: boolean;
-  (m: any, plug: any): Promise<void>;
-}
+/**
+ * @typedef {Object} GroupMetadata
+ * @property {string} [subject]
+ * @property {Participant[]} [participants]
+ */
 
-interface PlugContext {
-  vynnoxbeyours: ExtendedWASocket;
-  prefix: string;
-  command: string;
-  nevreply: (text: string) => Promise<void>;
-  text: string;
-  itsOwner: boolean;
-  isGroup: boolean;
-  isPrivate: boolean;
-  pushname: string;
-  isAdmins: boolean;
-  groupMetadata: GroupMetadata;
-}
+/**
+ * @callback PluginFunction
+ * @param {any} m
+ * @param {any} plug
+ * @returns {Promise<void>}
+ */
 
-interface ExtendedWASocket extends WASocket {
-  user?: {
-    id: string;
-  };
-  decodeJid?: (jid: string) => string;
-  public?: boolean;
-  waUploadToServer?: any;
-}
+/**
+ * @typedef {Object} Plugin
+ * @property {string[]} [command]
+ * @property {boolean} [owner]
+ * @property {boolean} [group]
+ * @property {boolean} [private]
+ * @property {boolean} [admin]
+ * @property {PluginFunction} function
+ */
+
+/**
+ * @typedef {Object} PlugContext
+ * @property {ExtendedWASocket} vynnoxbeyours
+ * @property {string} prefix
+ * @property {string} command
+ * @property {Function} nevreply
+ * @property {string} text
+ * @property {boolean} itsOwner
+ * @property {boolean} isGroup
+ * @property {boolean} isPrivate
+ * @property {string} pushname
+ * @property {boolean} isAdmins
+ * @property {GroupMetadata} groupMetadata
+ */
+
+/**
+ * @typedef {WASocket & Object} ExtendedWASocket
+ * @property {Object} [user]
+ * @property {string} user.id
+ * @property {Function} [decodeJid]
+ * @property {boolean} [public]
+ * @property {any} [waUploadToServer]
+ */
 
 const vynnoxbeyours = async (
-  vynnoxbeyours: ExtendedWASocket, 
-  m: any, 
-  chatUpdate: MessageUpdate, 
-  store: Store
-): Promise<void> => {
+  /** @type {ExtendedWASocket} */ vynnoxbeyours, 
+  /** @type {any} */ m, 
+  /** @type {MessageUpdate} */ chatUpdate, 
+  /** @type {Store} */ store
+) => {
   try {
     const body = (
-      m.mtype === "conversation" ? m.message.conversation :
-      m.mtype === "imageMessage" ? m.message.imageMessage.caption :
-      m.mtype === "videoMessage" ? m.message.videoMessage.caption :
-      m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text :
-      m.mtype === "buttonsResponseMessage" ? m.message.buttonsResponseMessage.selectedButtonId :
-      m.mtype === "listResponseMessage" ? m.message.listResponseMessage.singleSelectReply.selectedRowId :
-      m.mtype === "templateButtonReplyMessage" ? m.message.templateButtonReplyMessage.selectedId :
-      m.mtype === "interactiveResponseMessage" ? JSON.parse(m.msg.nativeFlowResponseMessage.paramsJson).id :
-      m.mtype === "templateButtonReplyMessage" ? m.msg.selectedId :
-      m.mtype === "messageContextInfo" ? m.message.buttonsResponseMessage?.selectedButtonId ||
-      m.message.listResponseMessage?.singleSelectReply.selectedRowId || m.text : ""
+      m.mtype === "conversation" ? m.message?.conversation :
+      m.mtype === "imageMessage" ? m.message?.imageMessage?.caption :
+      m.mtype === "videoMessage" ? m.message?.videoMessage?.caption :
+      m.mtype === "extendedTextMessage" ? m.message?.extendedTextMessage?.text :
+      m.mtype === "buttonsResponseMessage" ? m.message?.buttonsResponseMessage?.selectedButtonId :
+      m.mtype === "listResponseMessage" ? m.message?.listResponseMessage?.singleSelectReply?.selectedRowId :
+      m.mtype === "templateButtonReplyMessage" ? m.message?.templateButtonReplyMessage?.selectedId :
+      m.mtype === "interactiveResponseMessage" ? JSON.parse(m.msg?.nativeFlowResponseMessage?.paramsJson)?.id :
+      m.mtype === "templateButtonReplyMessage" ? m.msg?.selectedId :
+      m.mtype === "messageContextInfo" ? m.message?.buttonsResponseMessage?.selectedButtonId ||
+      m.message?.listResponseMessage?.singleSelectReply?.selectedRowId || m.text : ""
     ) || "";
     
     const sender = m.key.fromMe 
-      ? (vynnoxbeyours.user?.id.split(":")[0] + "@s.whatsapp.net" || vynnoxbeyours.user?.id) 
+      ? (vynnoxbeyours.user?.id?.split(":")[0] + "@s.whatsapp.net" || vynnoxbeyours.user?.id) 
       : m.key.participant || m.key.remoteJid;
     
-    const senderNumber = sender.split('@')[0];
+    const senderNumber = sender?.split('@')[0] || '';
     const budy = (typeof m.text === 'string' ? m.text : '');
     const prefa = ["", "!", ".", ",", "🐤", "🗿"];
 
     const prefixRegex = /^[°zZ#$@*+,.?=''():√%!¢£¥€π¤ΠΦ_&><`™©®Δ^βα~¦|/\\©^]/;
-    const prefix = prefixRegex.test(body) ? body.match(prefixRegex)![0] : '.';
+    const prefix = prefixRegex.test(body) ? body.match(prefixRegex)[0] : '.';
     const from = m.key.remoteJid;
     const isGroup = from.endsWith("@g.us");
     
-    const owner = JSON.parse(fs.readFileSync('./database/owner.json', 'utf-8'));
+    let owner = [];
+    try {
+      owner = JSON.parse(fs.readFileSync('./database/owner.json', 'utf-8'));
+    } catch (error) {
+      console.log(chalk.yellow('File owner.json tidak ditemukan, menggunakan default owner'));
+      owner = [];
+    }
+    
     const botNumber = vynnoxbeyours.decodeJid ? await vynnoxbeyours.decodeJid(vynnoxbeyours.user?.id || '') : '';
-    const itsOwner = [botNumber, ...owner, ...(global as any).onwer]
-      .map((v: string) => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net')
+    const itsOwner = [botNumber, ...owner, ...(global.onwer || [])]
+      .map((v) => v?.replace(/[^0-9]/g, '') + '@s.whatsapp.net')
       .includes(m.sender);
     const isBot = botNumber.includes(senderNumber);
     
     const isCmd = body.startsWith(prefix);
-    const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift()!.toLowerCase() : '';
-    const command2 = body.replace(prefix, '').trim().split(/ +/).shift()!.toLowerCase();
+    const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift()?.toLowerCase() : '';
+    const command2 = body.replace(prefix, '').trim().split(/ +/).shift()?.toLowerCase() || '';
     const args = body.trim().split(/ +/).slice(1);
     const pushname = m.pushName || "No Name";
     const text = args.join(" ");
@@ -224,16 +264,14 @@ const vynnoxbeyours = async (
     const qmsg = (quoted.msg || quoted);
     const isMedia = /image|video|sticker|audio/.test(mime);
     
-    const { smsg, fetchJson, sleep, formatSize, runtime } = require('./l lízanámi/myfunction.js');
-
-    const groupMetadata: GroupMetadata = m?.isGroup 
+    const groupMetadata = m?.isGroup 
       ? await vynnoxbeyours.groupMetadata(m.chat).catch(() => ({})) 
       : {};
     
     const groupName = m?.isGroup ? groupMetadata.subject || '' : '';
-    const participants: Participant[] = m?.isGroup 
-      ? groupMetadata.participants?.map((p: any) => {
-          let admin: string | null = null;
+    const participants = m?.isGroup 
+      ? groupMetadata.participants?.map((p) => {
+          let admin = null;
           if (p.admin === 'superadmin') admin = 'superadmin';
           else if (p.admin === 'admin') admin = 'admin';
           return {
@@ -258,7 +296,7 @@ const vynnoxbeyours = async (
     const isAdmins = m?.isGroup ? groupAdmins.includes(m.sender) : false;
     const isGroupOwner = m?.isGroup ? groupOwner === m.sender : false;
     
-    const senderLid = ((): string | null => {
+    const senderLid = (() => {
       const p = participants.find(p => p.jid === m.sender);
       return p?.lid || null;
     })();
@@ -275,7 +313,7 @@ const vynnoxbeyours = async (
       .tz('Asia/Jakarta')
       .format('dddd, D MMMM - YYYY');
     
-    let ucapanWaktu: string;
+    let ucapanWaktu;
     if (time >= '19:00:00' && time < '23:59:00') {
       ucapanWaktu = 'Good night! The stars are watching over you';
     } else if (time >= '15:00:00' && time < '19:00:00') {
@@ -287,293 +325,349 @@ const vynnoxbeyours = async (
     } else {
       ucapanWaktu = 'Enjoy the night! Enjoy the quiet of the night';
     }
-    
-    if (isCmd) {
-  let isGroup = m.key.remoteJid.endsWith('@g.us')
-  let groupName = isGroup ? (await fantzy.groupMetadata(m.chat)).subject : "Private Chat"
-  
-  console.log(chalk.bgHex("#4a69bd").bold(`<!> 新しいメッセージ <!>`))
-  console.log(
-    chalk.blue.bold(` 𖤐 Time: ${penghitung}, ${jam} WIB\n`),
-    chalk.blue.bold(`𖤐 Number: ${m.sender.split("@")[0]}\n`),
-    chalk.blue.bold(`𖤐 Name: ${m.pushName}\n`),
-    chalk.blue.bold(`𖤐 From: ${groupName}\n`),
-    chalk.blue.bold(`𖤐 Command: ${prefix + command}`)
-  )
-}
 
-    async function nevreply(text: string): Promise<void> {
-      await vynnoxbeyours.sendMessage(m.chat, {
-        eventMessage: {
-          isCanceled: false,
-          name: `${text} ${jam}`,
-          description: `${ucapanWaktu}`,
-          location: {
-            degreesLatitude: 0,
-            degreesLongitude: 0,
-            name: `${jam}`
-          },
-          joinLink: "https://call.whatsapp.com/video/swèzestyèst1963",
-          startTime: "1763019000",
-          endTime: "1763026200",
-          extraGuestsAllowed: false
-        }
-      }, { quoted: fquoted.packSticker });
+    let ppuser;
+    try {
+      ppuser = await vynnoxbeyours.profilePictureUrl(m.sender, 'image');
+    } catch (err) {
+      ppuser = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60';
+    }
+    
+    let ppnyauser;
+    try {
+      ppnyauser = await getBuffer(ppuser);
+    } catch (error) {
+      console.log(chalk.yellow('Gagal mendapatkan buffer profile picture'));
+      ppnyauser = null;
     }
 
-    const pluginsLoader = async (directory: string): Promise<Plugin[]> => {
-      let plugins: Plugin[] = [];
-      const folders = fs.readdirSync(directory);
+    const resize = async (image, width, height) => {
+      try {
+        const oyy = await jimp.read(image);
+        const kiyomasa = await oyy
+          .resize(width, height)
+          .getBufferAsync(jimp.MIME_JPEG);
+        return kiyomasa;
+      } catch (error) {
+        console.log(chalk.red('Error resizing image:'), error);
+        return null;
+      }
+    };
+
+    if (isCmd && command) {
+      const isGroup = m.key.remoteJid.endsWith('@g.us');
+      let groupName = "Private Chat";
       
-      folders.forEach(file => {
-        const filePath = path.join(directory, file);
-        if (filePath.endsWith(".js")) {
-          try {
-            const resolvedPath = require.resolve(filePath);
-            if (require.cache[resolvedPath]) {
-              delete require.cache[resolvedPath];
+      try {
+        if (isGroup) {
+          const metadata = await vynnoxbeyours.groupMetadata(m.chat);
+          groupName = metadata.subject || "Group Chat";
+        }
+      } catch (error) {
+        groupName = "Group Chat";
+      }
+      
+      console.log(chalk.bgHex("#4a69bd").bold(`<!> 新しいメッセージ <!>`));
+      console.log(
+        chalk.blue.bold(` 𖤐 Time: ${penghitung}, ${jam} WIB\n`),
+        chalk.blue.bold(`𖤐 Number: ${m.sender.split("@")[0]}\n`),
+        chalk.blue.bold(`𖤐 Name: ${m.pushName}\n`),
+        chalk.blue.bold(`𖤐 From: ${groupName}\n`),
+        chalk.blue.bold(`𖤐 Command: ${prefix + command}`)
+      );
+    }
+
+    async function nevreply(text) {
+      try {
+        await vynnoxbeyours.sendMessage(m.chat, {
+          text: `${text} ${jam}\n${ucapanWaktu}`
+        }, { quoted: m });
+      } catch (error) {
+        console.log(chalk.red('Error sending reply:'), error);
+        await vynnoxbeyours.sendMessage(m.chat, {
+          text: `${text} ${jam}\n${ucapanWaktu}`
+        }, { quoted: m });
+      }
+    }
+
+    const pluginsLoader = async (directory) => {
+      let plugins = [];
+      try {
+        const folders = fs.readdirSync(directory);
+        
+        for (const file of folders) {
+          const filePath = path.join(directory, file);
+          if (filePath.endsWith(".js")) {
+            try {
+              const resolvedPath = require.resolve(filePath);
+              if (require.cache[resolvedPath]) {
+                delete require.cache[resolvedPath];
+              }
+              const plugin = require(filePath);
+              plugins.push(plugin);
+            } catch (error) {
+              console.log(chalk.red(`Error loading plugin ${filePath}:`), error);
             }
-            const plugin = require(filePath);
-            plugins.push(plugin);
-          } catch (error) {
-            console.log(`${filePath}:`, error);
           }
         }
-      });
+      } catch (error) {
+        console.log(chalk.red(`Error reading plugin directory ${directory}:`), error);
+      }
       return plugins;
     };
 
-    const pluginsDisable = true;
-    const plugins = await pluginsLoader(path.resolve(__dirname, "./command"));
-    
-    const plug: PlugContext = { 
+    const pluginsDisable = false; 
+    let plugins = [];
+    try {
+      plugins = await pluginsLoader(path.resolve(__dirname, "./command"));
+    } catch (error) {
+      console.log(chalk.red('Error loading plugins:'), error);
+    }
+
+    const plug = { 
       vynnoxbeyours,
       prefix,
       command, 
       nevreply,
       text, 
       itsOwner,
-      isGroup: m.isGroup, 
+      isGroup: !!m.isGroup, 
       isPrivate: !m.isGroup, 
       pushname,
       isAdmins,
       groupMetadata
     };
+    if (!pluginsDisable && command && plugins.length > 0) {
+      for (let plugin of plugins) {
+        if (plugin.command && plugin.command.find(e => e === command.toLowerCase())) {
+          if (plugin.owner && !itsOwner) {
+            return nevreply("Owner only command");
+          }
+          
+          if (plugin.group && !plug.isGroup) {
+            return nevreply("Group only command");
+          }
+          
+          if (plugin.private && !plug.isPrivate) {
+            return nevreply("Private only command");
+          }
+          
+          if (plugin.admin && !plug.isAdmins) {
+            return nevreply("Admin only command");
+          }
 
-    for (let plugin of plugins) {
-      if (plugin.command && plugin.command.find(e => e == command.toLowerCase())) {
-        if (plugin.owner && !itsOwner) {
-          return nevreply("Owner only command");
-        }
-        
-        if (plugin.group && !plug.isGroup) {
-          return nevreply("Group only command");
-        }
-        
-        if (plugin.private && !plug.isPrivate) {
-          return nevreply("Private only command");
-        }
-        
-        if (plugin.admin && !plug.isAdmins) {
-          return nevreply("Admin only command");
-        }
-
-        if (typeof plugin === "function") {
-          await plugin(m, plug);
+          if (typeof plugin === "function") {
+            try {
+              await plugin(m, plug);
+              return; // Stop setelah plugin dieksekusi
+            } catch (error) {
+              console.log(chalk.red(`Error executing plugin for command ${command}:`), error);
+              await nevreply(`Error executing command: ${error.message}`);
+            }
+          }
         }
       }
     }
+    if (!command) return;
 
-    if (!pluginsDisable) return;
+    switch (command.toLowerCase()) {
+      case 'menu': {
+    let imagetqto = 'https://files.catbox.moe/6unfie.jpg';
+    let pan = `Nirvana [ TypeScript ]`;
+    const processingText = '🔍 *Sedang menganalisis bahasa pemrograman...*';
+    await nevreply(processingText);
+
+    function detectProgrammingLanguage(code: string): { language: string; confidence: number } {
+        const languagePatterns = {
+            typescript: [
+                { pattern: /\b(interface|type|export|import|as|enum|declare|namespace|readonly)\b/, weight: 2 },
+                { pattern: /:\s*\w+\s*[<{)]/, weight: 2 },
+                { pattern: /<[A-Z][^>]*>|<\/[A-Z][^>]*>/g, weight: 3 },
+                { pattern: /\b(React\.FC|useState<|useEffect<|useRef<|props:\s*{)/, weight: 3 },
+                { pattern: /\b(public|private|protected)\b/, weight: 2 }
+            ],
+            javascript: [
+                { pattern: /\b(function|const|let|var|=>|console\.log)\b/, weight: 1 },
+                { pattern: /\b(require|module\.exports|exports\.)\b/, weight: 2 },
+                { pattern: /\.js('|"|`)/, weight: 1 }
+            ],
+            python: [
+                { pattern: /\b(def|import|from|print|lambda|__name__|class\s+\w+)\b/, weight: 2 },
+                { pattern: /:\s*$/, weight: 2 }
+            ],
+            java: [
+                { pattern: /\b(public|class|static|void|System\.out\.println|extends|implements)\b/, weight: 2 },
+                { pattern: /\b(int|String|boolean|double)\s+\w+/, weight: 2 }
+            ]
+        };
+
+        const scores: { [key: string]: number } = {};
         
-    switch (command) {
-      case 'menu':
-        {
-          const thumbnailUrl = "https://files.catbox.moe/frdbht.jpg";
-          const cachedThumbnailUrl = await getCachedImageUrl(thumbnailUrl);          
-          const messagePayload: any = {
-            interactiveMessage: {
-              title: `
-╭ ー、〔 𝐔𝐬𝐞𝐫 - 🫧 〕
-│⚘ ᴜsᴇʀ : ${pushname}
-╰──────────`,
-              footer: `@vynnox/lyvineemine ˗ˋˏ63ˎˊ˗⁩ | ${time}`,
-              thumbnail: cachedThumbnailUrl,
-              nativeFlowMessage: {
-                messageParamsJson: JSON.stringify({
-                  limited_time_offer: {
-                    text: 'l lízanámi, since 1963',
-                    url: 't.me/lizanamii',
-                    copy_code: 'l lízanámi, since 1963',
-                    expiration_time: Date.now() * 99999,
-                  },
-                  bottom_sheet: {
-                    in_thread_buttons_limit: 2,
-                    divider_indices: [1, 2, 3, 4, 5, 999],
-                    list_title: 'l lízanámi',
-                    button_title: 'l lízanámi',
-                  },
-                  tap_target_configuration: {
-                    title: 'l lízanámi',
-                    description: 'bomboclard',
-                    canonical_url: 'https://shop.example.com/angebot',
-                    domain: 'shop.example.com',
-                    button_index: 0,
-                  },
-                }),
-                buttons: [
-                  {
-                    name: 'single_select',
-                    buttonParamsJson: JSON.stringify({
-                      has_multiple_buttons: true,
-                    }),
-                  },
-                  {
-                    name: 'call_permission_request',
-                    buttonParamsJson: JSON.stringify({
-                      has_multiple_buttons: true,
-                    }),
-                  },
-                  {
-                    name: 'single_select',
-                    buttonParamsJson: JSON.stringify({
-                      title: 'l lízanámi',
-                      sections: [
-                        {
-                          title: 'l lízanámi',
-                          highlight_label: 'label',
-                          rows: [
-                            {
-                              title: '@tqto',
-                              description: `Support ${time}`,
-                              id: '.tqto',
-                            },
-                            {
-                              title: '@cmt',
-                              description: `Create Mt Ban ${time}`,
-                              id: '.cmt',
-                            },
-                            {
-                              title: '@donasi',
-                              description: `Donate ${time}`,
-                              id: '.donasi',
-                            },
-                          ],
-                        },
-                      ],
-                      has_multiple_buttons: true,
-                    }),
-                  },
-                  {
-                    name: 'galaxy_message',
-                    buttonParamsJson: JSON.stringify({
-                      flow_message_version: '3',
-                      flow_token: 'unused',
-                      flow_id: '1775342589999842',
-                      flow_cta: 'l lízanámi',
-                      flow_action: {
-                        navigate: true,
-                        screen: 'AWARD_CLAIM',
-                        data: {
-                          error_types: [
-                            { id: '1', title: 'No llega' },
-                            { id: '2', title: 'Diferente' },
-                            { id: '3', title: 'Calidad' },
-                          ],
-                          campaigns: [
-                            { id: 'campaign_1', title: 'Campaña 1' },
-                            { id: 'campaign_2', title: 'Campaña 2' },
-                            { id: 'campaign_3', title: 'Campaña 3' },
-                          ],
-                          categories: [
-                            { id: 'category_1', title: 'Unicam' },
-                            { id: 'category_2', title: 'Constantes' },
-                            {
-                              id: 'category_3',
-                              title: 'Referidos',
-                              'on-unselect-action': {
-                                name: 'update_data',
-                                payload: { subcategory_visibility: false },
-                              },
-                              'on-select-action': {
-                                name: 'update_data',
-                                payload: {
-                                  subcategories: [
-                                    { id: '1', title: '1 subcategory' },
-                                    { id: '2', title: '2 subcategory' },
-                                  ],
-                                  subcategory_visibility: true,
-                                },
-                              },
-                            },
-                          ],
-                          subcategory_visibility: false,
-                        },
-                      },
-                      flow_metadata: {
-                        flow_json_version: 1000,
-                        data_api_protocol: 'Believe in yourself, anything is possible.',
-                        data_api_version: 9999999,
-                        flow_name: '𝟖𝟘𝟖 𝐍𝐞𝐜 🪽',
-                        categories: [],
-                      },
-                      icon: 'REVIEW',
-                      has_multiple_buttons: true,
-                    }),
-                  },
-                  {
-                    name: 'cta_copy',
-                    buttonParamsJson: JSON.stringify({
-                      display_text: 'l lízanámi',
-                      id: '123456789',
-                      copy_code: "@lizanamii/lizbailyesx",
-                    }),
-                  },
-                  {
-                    name: 'galaxy_message',
-                    buttonParamsJson: JSON.stringify({
-                      icon: 'REVIEW',
-                      flow_cta: '夜明け',
-                      flow_message_version: '3',
-                    }),
-                  },
-                  {
-                    name: 'galaxy_message',
-                    buttonParamsJson: JSON.stringify({
-                      icon: 'PROMOTION',
-                      flow_cta: 'レクシー',
-                      flow_message_version: '3',
-                    }),
-                  },
-                  {
-                    name: 'galaxy_message',
-                    buttonParamsJson: JSON.stringify({
-                      icon: 'DOCUMENT',
-                      flow_cta: '< リザナミ幹部? ',
-                      flow_message_version: '3',
-                    }),
-                  },
-                  {
-                    name: 'galaxy_message',
-                    buttonParamsJson: JSON.stringify({
-                      icon: 'DEFAULT',
-                      flow_cta: 'リザナミ',
-                      flow_message_version: '3',
-                    })
-                  }
-                ]
-              }
+        for (const [language, patterns] of Object.entries(languagePatterns)) {
+            scores[language] = 0;
+            for (const { pattern, weight } of patterns) {
+                const matches = code.match(pattern);
+                if (matches) {
+                    scores[language] += matches.length * weight;
+                }
             }
-          };
-
-          await vynnoxbeyours.sendMessage(m.chat, messagePayload, { quoted: fquoted.packSticker });
         }
-        break;
-      
-      case 'backup':
-      case 'bp':
+
+        let detectedLanguage = 'unknown';
+        let highestScore = 0;
+
+        for (const [language, score] of Object.entries(scores)) {
+            if (score > highestScore) {
+                highestScore = score;
+                detectedLanguage = language;
+            }
+        }
+
+        const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+        const confidence = totalScore > 0 ? Math.round((highestScore / totalScore) * 100) : 0;
+
+        return { language: detectedLanguage, confidence };
+    }
+
+    async function getActualCodeFromFile(): Promise<string> {
+        try {
+            if (typeof require !== 'undefined') {
+                const fs = require('fs');
+                const path = require('path');
+          
+                if (fs.existsSync(__filename)) {
+                    return fs.readFileSync(__filename, 'utf8');
+                }
+            }
+            
+            const codeSamples = [
+                detectProgrammingLanguage.toString(),
+                getActualCodeFromFile.toString()
+            ].join('\n');
+
+            return codeSamples;
+
+        } catch (error) {
+            return `
+                interface UserData {
+                    id: number;
+                    name: string;
+                    email: string;
+                }
+
+                type MessageType = 'text' | 'image';
+
+                class Handler {
+                    private data: Map<string, any> = new Map();
+                    
+                    public process<T>(message: T): boolean {
+                        return true;
+                    }
+                }
+            `;
+        }
+    }
+
+    const actualCode = await getActualCodeFromFile();
+    const detectionResult = detectProgrammingLanguage(actualCode);
+
+    let msg = generateWAMessageFromContent(
+        m.chat,
         {
-          if (!itsOwner) return nevreply(messages.owner);
+            viewOnceMessage: {
+                message: {
+                    interactiveMessage: {
+                        body: { text: pan },
+                        carouselMessage: {
+                            cards: [
+                                {
+                                    header: proto.Message.InteractiveMessage.Header.create({
+                                        ...(await prepareWAMessageMedia(
+                                            { image: { url: imagetqto } },
+                                            { upload: vynnoxbeyours.waUploadToServer },
+                                        )),
+                                        title: ``,
+                                        gifPlayback: true,
+                                        subtitle: "🍂",
+                                        hasMediaAttachment: false,
+                                    }),
+                                    body: {
+                                        text: `( 🍂 ) - 你好 *Ni Hao ─ Wangsaff*\n我是一名自動化的 Lanny Yawa 助理，隨時準備為您提供您正在尋找的資訊和答案
+    
+[ ᯓ] League: ${detectionResult.language.toUpperCase()}
+[ 📊 ] Confidence: ${detectionResult.confidence}%
+[ ≭ ] User: ${pushname}
+[ 𖣸 ] Time: ${time}`,
+                                    },
+                                    nativeFlowMessage: {
+                                        messageParamsJson: JSON.stringify({          
+                                            bottom_sheet: {            
+                                                in_thread_buttons_limit: 2,            
+                                                divider_indices: [1, 2, 3, 4, 5, 999],            
+                                                list_title: "感謝メニュー",            
+                                                button_title: "感謝メニュー"          
+                                            },          
+                                            tap_target_configuration: {            
+                                                title: "貢献者様ご紹介",            
+                                                description: "開発チームと支援者",            
+                                                canonical_url: "Aletta Konaiwa",            
+                                                domain: "lannybuypanel.vestia.icu",            
+                                                button_index: 0          
+                                            }        
+                                        }),        
+                                        buttons: [
+                                            {            
+                                                name: "single_select",            
+                                                buttonParamsJson: JSON.stringify({              
+                                                    has_multiple_buttons: true            
+                                                })          
+                                            },
+                                            {            
+                                                name: "single_select",            
+                                                buttonParamsJson: JSON.stringify({              
+                                                    title: "開発者情報",              
+                                                    sections: [                
+                                                        {                  
+                                                            title: "コア開発者",                  
+                                                            highlight_label: "主要メンバー",                  
+                                                            rows: [                    
+                                                                {                      
+                                                                    title: "@Fonixs Nirvana",                      
+                                                                    description: "プロジェクトリーダー",                      
+                                                                    id: "row_1"                    
+                                                                },
+                                                                {                      
+                                                                    title: "@Nirvana",                      
+                                                                    description: "開発チーム",                      
+                                                                    id: "row_2"                    
+                                                                }                  
+                                                            ]                
+                                                        }              
+                                                    ],              
+                                                    has_multiple_buttons: true            
+                                                })          
+                                            },          
+                                        ],
+                                    },
+                                },
+                            ],
+                            messageVersion: 1,
+                        },
+                    },
+                },
+            },
+        },
+        {},
+    );
+
+    await vynnoxbeyours.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
+    break;
+}
+      case 'backup':
+      case 'bp': {
+        if (!itsOwner) return nevreply("Owner only command");
+        
+        try {
           const sessionPath = './session';
           if (fs.existsSync(sessionPath)) {
             const files = fs.readdirSync(sessionPath);
@@ -608,132 +702,101 @@ const vynnoxbeyours = async (
             m.chat,
             {
               document: fs.readFileSync('./base.zip'),
-              fileName: `base.zip`,
+              fileName: `base-${Date.now()}.zip`,
               mimetype: 'application/zip',
-              caption: 'this is your backup file',
+              caption: `Backup file - ${tgl}`,
             },
             { quoted: m },
           );
           execSync('rm -rf base.zip');
-          await reaction(m.chat, '⚡');
+        } catch (error) {
+          console.log(chalk.red('Error in backup command:'), error);
+          await nevreply("Error membuat backup");
         }
         break;
+      }
+
       case 'buttonold': {
-        const teks = `> ようこそ`;
-        const buttons = [
-          {
-            buttonId: `${prefix}bugmenu`,
-            buttonText: { displayText: 'kosong' }
-          },
-          {
-            buttonId: `${prefix}menu`,
-            buttonText: { displayText: 'kosong' }
-          }
-        ];
+        try {
+          const teks = `> ようこそ`;
+          const buttons = [
+            {
+              buttonId: `${prefix}bugmenu`,
+              buttonText: { displayText: 'kosong' }
+            },
+            {
+              buttonId: `${prefix}menu`,
+              buttonText: { displayText: 'kosong' }
+            }
+          ];
 
-        const imageUrl = 'https://files.catbox.moe/msoysl.jpg';
-        const cachedImageUrl = await getCachedImageUrl(imageUrl);
+          const imageUrl = 'https://files.catbox.moe/msoysl.jpg';
+          const cachedImageUrl = await getCachedImageUrl(imageUrl);
 
-        const buttonMessage: any = {
-          image: { url: cachedImageUrl },
-          caption: teks,
-          footer: `Nǐ hǎo, nǐ gānggāng shǐyòngle zhǐlìngq ${prefix + command}`,
-          buttons: buttons,
-          headerType: 1,
-          viewOnce: true
-        };
+          const buttonMessage = {
+            image: { url: cachedImageUrl },
+            caption: teks,
+            footer: `Nǐ hǎo, nǐ gānggāng shǐyòngle zhǐlìngq ${prefix + command}`,
+            buttons: buttons,
+            headerType: 1
+          };
 
-        await vynnoxbeyours.sendMessage(m.chat, buttonMessage, { quoted: m });
+          await vynnoxbeyours.sendMessage(m.chat, buttonMessage, { quoted: m });
+        } catch (error) {
+          console.log(chalk.red('Error in buttonold command:'), error);
+          await nevreply("Error menampilkan button");
+        }
         break;
       }
 
-      case 'eee': {
-        const nevatxt = `> こんにちは、アドレス販売者が必要な場合は、最初に期間を選択してください`;
-        const flowActions = [{
-          buttonId: 'action',
-          buttonText: { displayText: 'kosong' },
-          type: 4,
-          nativeFlowInfo: {
-            name: 'single_select',
-            paramsJson: JSON.stringify({
-              title: 'kosong',
-              sections: [{
-                title: 'kosong',
-                rows: [
-                  {
-                    header: 'kosong',
-                    title: 'kosong',
-                    description: 'kosong',
-                    id: `.buttonold`
-                  }
-                ]
-              }, {
-                title: 'kosong',
-                rows: [
-                  {
-                    header: 'kosong',
-                    title: 'kosong',
-                    description: 'kosong',
-                    id: `.buttonold`
-                  }
-                ]
-              }]
-            })
-          }
-        }];
-
-        const imageUrl = 'https://files.catbox.moe/msoysl.jpg';
-        const cachedImageUrl = await getCachedImageUrl(imageUrl);
-
-        const buttonMessage: any = {
-          image: { url: cachedImageUrl },
-          caption: nevatxt,
-          footer: `Nǐ hǎo, nǐ gānggāng shǐyòngle zhǐlìngq ${prefix + command}`,
-          buttons: flowActions,
-          headerType: 1,
-          viewOnce: true
-        };
-
-        await vynnoxbeyours.sendMessage(m.chat, buttonMessage, { quoted: m });
-        break;
-      }
       case 'cacheinfo': {
-        if (!itsOwner) return nevreply("Ngapain Jir Khusus Owmer");
-        const cacheInfo = getCacheInfo();
-        await vynnoxbeyours.sendMessage(m.chat, {
-          text: `📊 *Cache Information*\n\n` +
-                `• Total Items: ${cacheInfo.totalItems}\n` +
-                `• Total Size: ${cacheInfo.totalSize}\n` +
-                `• Cache Duration: 24 hours\n` +
-                `• Max Cache Size: ${MAX_CACHE_SIZE} items\n\n` +
-                `_Cache Fuhsi Nya Biar Apa yak pikir sendiri dah🗿 cape ketik`
-        }, { quoted: m });
+        if (!itsOwner) return nevreply("Ngapain Jir Khusus Owner");
+        try {
+          const cacheInfo = getCacheInfo();
+          await vynnoxbeyours.sendMessage(m.chat, {
+            text: `📊 *Cache Information*\n\n` +
+                  `• Total Items: ${cacheInfo.totalItems}\n` +
+                  `• Total Size: ${cacheInfo.totalSize}\n` +
+                  `• Cache Duration: 24 hours\n` +
+                  `• Max Cache Size: ${MAX_CACHE_SIZE} items\n\n` +
+                  `_Cache Fuhsi Nya Biar Apa yak pikir sendiri dah🗿 cape ketik`
+          }, { quoted: m });
+        } catch (error) {
+          console.log(chalk.red('Error in cacheinfo command:'), error);
+        }
         break;
       }
+
       case 'clearcache': {
         if (!itsOwner) return nevreply("Owner only command");
-        const previousSize = imageCache.size;
-        imageCache.clear();
-        await vynnoxbeyours.sendMessage(m.chat, {
-          text: `🗑️ *Cache Hapus*\n\n` +
-                `• Previous items: ${previousSize}\n` +
-                `• Current items: ${imageCache.size}\n` +
-                `_Cache berhasil Di Hapus 😹`
-        }, { quoted: m });
+        try {
+          const previousSize = imageCache.size;
+          imageCache.clear();
+          await vynnoxbeyours.sendMessage(m.chat, {
+            text: `🗑️ *Cache Hapus*\n\n` +
+                  `• Previous items: ${previousSize}\n` +
+                  `• Current items: ${imageCache.size}\n` +
+                  `_Cache berhasil Di Hapus 😹`
+          }, { quoted: m });
+        } catch (error) {
+          console.log(chalk.red('Error in clearcache command:'), error);
+        }
         break;
       }
 
       default:
+        // Command tidak dikenali
         break;
     }
   } catch (e) {
-    console.error(chalk.redBright("Error:"), e);
+    console.error(chalk.redBright("Error utama:"), e);
   }
 };
 
 export default vynnoxbeyours;
 
-const file: string = require.resolve(__filename);
+// File watcher untuk development
+const file = require.resolve(__filename);
 fs.watchFile(file, () => {
   fs.unwatchFile(file);
   console.log(chalk.redBright(`Update ${__filename}`));
